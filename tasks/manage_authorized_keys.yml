@@ -1,6 +1,19 @@
 ---
+- name: "FILE | Ensure home directory exists: {{ item.name }}"
+  when:
+    - item.state == "present"
+    - item.name in ansible_facts.getent_passwd
+  ansible.builtin.file:
+    state: directory
+    path: "{{ ansible_facts.getent_passwd[item.name][4] }}"
+    mode: "0755"
+    owner: "{{ ansible_facts.getent_passwd[item.name][1] }}"
+    group: "{{ ansible_facts.getent_passwd[item.name][2] }}"
+
 - name: "FILE | Ensure '.ssh' directory exists: {{ item.name }}"
-  when: item.state | d('present') == "present"
+  when:
+    - item.state == "present"
+    - item.name in ansible_facts.getent_passwd
   ansible.builtin.file:
     state: directory
     path: "{{ ansible_facts.getent_passwd[item.name][4] }}/.ssh"
@@ -10,8 +23,9 @@
 
 - name: "TEMPLATE | Manage authorized key(s): {{ item.name }}"
   when:
-    - item.state | d('present') == "present"
+    - item.state == "present"
     - item.ssh_public_keys is defined
+    - item.name in ansible_facts.getent_passwd
   ansible.builtin.template:
     src: authorized_keys.j2
     dest: "{{ ansible_facts.getent_passwd[item.name][4] }}/.ssh/authorized_keys"
