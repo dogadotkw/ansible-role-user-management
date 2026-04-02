@@ -25,6 +25,20 @@
     shell: "{{ item.shell if item.shell is defined and item.shell else user_management_default_shell if user_management_default_shell is defined and user_management_default_shell else omit }}"
     state: "{{ item.state }}"
 
+- name: "USER | Manage local group membership for LDAP user: {{ item.name }}"
+  when:
+    - item.state == "present"
+    - item.name not in _um_local_passwd
+    - item.name in _um_all_passwd
+  loop: "{{ item.secondary_groups if item.secondary_groups is defined and item.secondary_groups else user_management_default_secondary_groups if user_management_default_secondary_groups is defined and user_management_default_secondary_groups else [] }}"
+  loop_control:
+    loop_var: _group
+  ansible.builtin.command:
+    cmd: "gpasswd -a {{ item.name }} {{ _group }}"
+  register: _gpasswd_result
+  changed_when: "'Adding' in _gpasswd_result.stdout"
+  failed_when: _gpasswd_result.rc != 0 and 'already a member' not in _gpasswd_result.stdout
+
 - name: "USER | Manage password: {{ item.name }}"
   when:
     - item.state == "present"
