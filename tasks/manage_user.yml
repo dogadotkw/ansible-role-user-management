@@ -1,5 +1,6 @@
 ---
 - name: "USER | Manage user: {{ item.name }}"
+  when: item.name in _um_local_passwd or item.name not in _um_all_passwd
   ansible.builtin.user:
     # Use user_management_users.groups_append if defined, else append secondary groups if user_management_users.secondary_groups are defined
     append: "{{ item.groups_append if item.groups_append is defined and item.groups_append else user_management_default_secondary_groups_append if user_management_default_secondary_groups_append is defined and user_management_default_secondary_groups_append else omit }}"
@@ -22,12 +23,13 @@
     remove: "{{ item.userdel_remove | default(false) }}"
     # Use user_management_users.shell if defined, else use default shell as defined in defaults file
     shell: "{{ item.shell if item.shell is defined and item.shell else user_management_default_shell if user_management_default_shell is defined and user_management_default_shell else omit }}"
-    state: "{{ item.state | d('present') }}"
+    state: "{{ item.state }}"
 
 - name: "USER | Manage password: {{ item.name }}"
   when:
-    - item.state | d("present") == "present"
+    - item.state == "present"
     - item.password is defined and item.password
+    - item.name in _um_local_passwd or item.name not in _um_all_passwd
   ansible.builtin.user:
     name: "{{ item.name }}"
     password: "{{ item.password | default(omit) }}"
